@@ -1,0 +1,61 @@
+"""
+Staff module lifecycle hooks.
+
+Called by ModuleRuntime during install/activate/deactivate/uninstall/upgrade.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
+
+
+async def on_install(session: AsyncSession, hub_id: UUID) -> None:
+    """Called after module installation + migration. Seed default settings and roles."""
+    from .models import StaffRole, StaffSettings
+
+    # Create default settings
+    settings = StaffSettings(hub_id=hub_id)
+    session.add(settings)
+
+    # Create default roles
+    defaults = [
+        {"name": "Manager", "description": "Team manager with full access", "color": "#3B82F6", "order": 0},
+        {"name": "Employee", "description": "Regular staff member", "color": "#10B981", "order": 1},
+        {"name": "Trainee", "description": "Staff member in training", "color": "#F59E0B", "order": 2},
+    ]
+    for role_data in defaults:
+        role = StaffRole(hub_id=hub_id, **role_data)
+        session.add(role)
+
+    await session.flush()
+    logger.info("Staff module installed for hub %s — default settings and roles created", hub_id)
+
+
+async def on_activate(session: AsyncSession, hub_id: UUID) -> None:
+    """Called when module is activated."""
+    logger.info("Staff module activated for hub %s", hub_id)
+
+
+async def on_deactivate(session: AsyncSession, hub_id: UUID) -> None:
+    """Called when module is deactivated."""
+    logger.info("Staff module deactivated for hub %s", hub_id)
+
+
+async def on_uninstall(session: AsyncSession, hub_id: UUID) -> None:
+    """Called before module uninstall."""
+    logger.info("Staff module uninstalled for hub %s", hub_id)
+
+
+async def on_upgrade(session: AsyncSession, hub_id: UUID, from_version: str, to_version: str) -> None:
+    """Called when the module is updated. Run data migrations between versions."""
+    logger.info(
+        "Staff module upgraded from %s to %s for hub %s",
+        from_version, to_version, hub_id,
+    )

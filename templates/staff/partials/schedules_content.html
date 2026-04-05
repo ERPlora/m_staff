@@ -1,0 +1,270 @@
+<div x-data="schedulesApp()" class="p-4">
+    {% if member %}
+    <!-- Single staff member schedules -->
+    <div class="flex items-center gap-4 mb-6">
+        <button class="btn btn-ghost btn-sm"
+            hx-get="/m/staff/staff/{{ member.id }}"
+            hx-target="#main-content-area"
+            hx-push-url="true">
+            {{ icon("arrow-back-outline") }}
+        </button>
+        <h1 class="text-xl font-semibold">{{ _("Schedules") }} - {{ member.full_name }}</h1>
+        <button class="btn btn-sm color-primary ml-auto" @click="showCreate = true">
+            {{ icon("add-outline", css_class="mr-1") }}
+            {{ _("New Schedule") }}
+        </button>
+    </div>
+
+    {% if schedules %}
+    <div class="space-y-4">
+        {% for schedule in schedules %}
+        <div class="card">
+            <div class="card-header">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <h2 class="card-title">{{ schedule.name }}</h2>
+                        {% if schedule.is_default %}
+                        <span class="chip chip--sm chip--primary">{{ _("Default") }}</span>
+                        {% endif %}
+                        {% if not schedule.is_active %}
+                        <span class="chip chip--sm chip--warning">{{ _("Inactive") }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-sm text-muted">
+                        {% if schedule.effective_from %}
+                        {{ schedule.effective_from|dateformat("d/m/Y") }}
+                        {% endif %}
+                        {% if schedule.effective_until %}
+                        - {{ schedule.effective_until|dateformat("d/m/Y") }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="overflow-x-auto">
+                    <table class="table w-full">
+                        <caption class="sr-only">{{ _("Working Hours") }}</caption>
+                        <thead class="table__head">
+                            <tr>
+                                <th class="table__th">{{ _("Day") }}</th>
+                                <th class="table__th">{{ _("Hours") }}</th>
+                                <th class="table__th">{{ _("Break") }}</th>
+                                <th class="table__th text-right">{{ _("Total") }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table__body">
+                            {% for wh in schedule.working_hours|sort(attribute='day_of_week') %}
+                            <tr class="table__row">
+                                <td class="table__td font-medium">{{ wh.day_name }}</td>
+                                <td class="table__td">
+                                    {% if wh.is_working %}
+                                    {{ wh.start_time.strftime('%H:%M') }} - {{ wh.end_time.strftime('%H:%M') }}
+                                    {% else %}
+                                    <span class="text-muted">{{ _("Day Off") }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="table__td">
+                                    {% if wh.is_working and wh.break_start and wh.break_end %}
+                                    {{ wh.break_start.strftime('%H:%M') }} - {{ wh.break_end.strftime('%H:%M') }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="table__td text-right">
+                                    {% if wh.is_working %}
+                                    {{ (wh.working_minutes / 60)|round(1) }}h
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-12 text-muted">
+            {{ icon("calendar-outline", css_class="text-5xl block mx-auto mb-2") }}
+            <p class="mt-2">{{ _("No schedules configured") }}</p>
+            <button class="btn color-primary btn-sm mt-3" @click="showCreate = true">
+                {{ icon("add-outline", css_class="mr-1") }}
+                {{ _("Create Schedule") }}
+            </button>
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <!-- All staff schedules overview -->
+    <h1 class="text-xl font-semibold mb-6">{{ _("Staff Schedules") }}</h1>
+    {% if staff %}
+    <div class="space-y-4">
+        {% for s in staff %}
+        <div class="card">
+            <div class="card-header cursor-pointer"
+                hx-get="/m/staff/staff/{{ s.id }}/schedules"
+                hx-target="#main-content-area"
+                hx-push-url="true">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <span class="text-xs font-semibold text-primary">{{ s.first_name[0] }}{{ s.last_name[0] }}</span>
+                    </div>
+                    <div>
+                        <div class="font-medium">{{ s.full_name }}</div>
+                        <div class="text-xs text-muted">
+                            {% if staff_schedules[s.id|string] %}
+                            {{ staff_schedules[s.id|string]|length }} {{ _("schedule(s)") }}
+                            {% else %}
+                            {{ _("No schedule") }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {{ icon("chevron-forward-outline", css_class="ml-auto text-muted") }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-12 text-muted">
+            {{ icon("calendar-outline", css_class="text-5xl block mx-auto mb-2") }}
+            <p class="mt-2">{{ _("No active staff members") }}</p>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Create Schedule Modal -->
+    <div class="modal-backdrop" x-show="showCreate" x-cloak>
+        <div class="modal modal--lg" @click.outside="showCreate = false">
+            <div class="modal-header">
+                <h2 class="modal-title">{{ _("New Schedule") }}</h2>
+                <button @click="showCreate = false" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body space-y-4">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Schedule Name") }}</label>
+                    <input type="text" class="input w-full" x-model="newSchedule.name" placeholder="{{ _('e.g. Summer Hours') }}">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Effective From") }}</label>
+                        <input type="date" class="input w-full" x-model="newSchedule.effective_from">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Effective Until") }}</label>
+                        <input type="date" class="input w-full" x-model="newSchedule.effective_until">
+                    </div>
+                </div>
+                <label class="flex items-center gap-3">
+                    <input type="checkbox" class="toggle" x-model="newSchedule.is_default">
+                    <span>{{ _("Set as default schedule") }}</span>
+                </label>
+
+                <hr class="border-base-300">
+                <h3 class="text-sm font-semibold text-muted uppercase tracking-wide">{{ _("Working Hours") }}</h3>
+
+                <template x-for="(day, idx) in workingHours" :key="idx">
+                    <div class="flex items-center gap-3 p-3 rounded-lg bg-base-100">
+                        <label class="flex items-center gap-2 w-28">
+                            <input type="checkbox" class="toggle toggle-sm" x-model="day.is_working">
+                            <span class="text-sm font-medium" x-text="dayNames[idx]"></span>
+                        </label>
+                        <template x-if="day.is_working">
+                            <div class="flex flex-wrap items-center gap-2 flex-1">
+                                <input type="time" class="input input-sm" x-model="day.start_time">
+                                <span class="text-muted">-</span>
+                                <input type="time" class="input input-sm" x-model="day.end_time">
+                                <span class="text-xs text-muted ml-2">{{ _("Break:") }}</span>
+                                <input type="time" class="input input-sm" x-model="day.break_start" placeholder="{{ _('Start') }}">
+                                <span class="text-muted">-</span>
+                                <input type="time" class="input input-sm" x-model="day.break_end" placeholder="{{ _('End') }}">
+                            </div>
+                        </template>
+                        <template x-if="!day.is_working">
+                            <span class="text-sm text-muted">{{ _("Day Off") }}</span>
+                        </template>
+                    </div>
+                </template>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" @click="showCreate = false">{{ _("Cancel") }}</button>
+                <button class="btn color-primary" @click="createSchedule()" :disabled="saving">
+                    <span x-show="!saving">{{ _("Create") }}</span>
+                    <span x-show="saving" class="loading loading-sm"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+function schedulesApp() {
+    return {
+        showCreate: false,
+        saving: false,
+        dayNames: ['{{ _("Monday") }}', '{{ _("Tuesday") }}', '{{ _("Wednesday") }}', '{{ _("Thursday") }}', '{{ _("Friday") }}', '{{ _("Saturday") }}', '{{ _("Sunday") }}'],
+        newSchedule: {
+            name: 'Default Schedule',
+            is_default: true,
+            effective_from: '',
+            effective_until: '',
+        },
+        workingHours: [
+            {day_of_week: 0, start_time: '09:00', end_time: '18:00', break_start: '14:00', break_end: '15:00', is_working: true},
+            {day_of_week: 1, start_time: '09:00', end_time: '18:00', break_start: '14:00', break_end: '15:00', is_working: true},
+            {day_of_week: 2, start_time: '09:00', end_time: '18:00', break_start: '14:00', break_end: '15:00', is_working: true},
+            {day_of_week: 3, start_time: '09:00', end_time: '18:00', break_start: '14:00', break_end: '15:00', is_working: true},
+            {day_of_week: 4, start_time: '09:00', end_time: '18:00', break_start: '14:00', break_end: '15:00', is_working: true},
+            {day_of_week: 5, start_time: '09:00', end_time: '14:00', break_start: '', break_end: '', is_working: false},
+            {day_of_week: 6, start_time: '09:00', end_time: '14:00', break_start: '', break_end: '', is_working: false},
+        ],
+
+        async createSchedule() {
+            this.saving = true;
+            try {
+                const payload = {
+                    schedule: {
+                        name: this.newSchedule.name,
+                        is_default: this.newSchedule.is_default,
+                        effective_from: this.newSchedule.effective_from || null,
+                        effective_until: this.newSchedule.effective_until || null,
+                        is_active: true,
+                    },
+                    working_hours: this.workingHours.map(wh => ({
+                        day_of_week: wh.day_of_week,
+                        start_time: wh.start_time,
+                        end_time: wh.end_time,
+                        break_start: wh.break_start || null,
+                        break_end: wh.break_end || null,
+                        is_working: wh.is_working,
+                    })),
+                };
+                {% if member %}
+                const resp = await fetch('/m/staff/staff/{{ member.id }}/schedules/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.showCreate = false;
+                    htmx.ajax('GET', '/m/staff/staff/{{ member.id }}/schedules', {target: '#main-content-area'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error});
+                }
+                {% endif %}
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.saving = false;
+            }
+        },
+    }
+}
+</script>

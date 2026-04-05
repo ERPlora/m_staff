@@ -1,0 +1,209 @@
+<div x-data="timeOffApp()" class="p-4">
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-6">
+        <button class="btn btn-ghost btn-sm"
+            hx-get="/m/staff/staff/{{ member.id }}"
+            hx-target="#main-content-area"
+            hx-push-url="true">
+            {{ icon("arrow-back-outline") }}
+        </button>
+        <h1 class="text-xl font-semibold">{{ _("Time Off") }} - {{ member.full_name }}</h1>
+        <button class="btn btn-sm color-primary ml-auto" @click="showCreate = true">
+            {{ icon("add-outline", css_class="mr-1") }}
+            {{ _("Request Time Off") }}
+        </button>
+    </div>
+
+    {% if time_offs %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <caption class="sr-only">{{ _("Time Off Requests") }}</caption>
+                    <thead class="table__head">
+                        <tr>
+                            <th class="table__th">{{ _("Type") }}</th>
+                            <th class="table__th">{{ _("Period") }}</th>
+                            <th class="table__th text-center">{{ _("Days") }}</th>
+                            <th class="table__th">{{ _("Status") }}</th>
+                            <th class="table__th">{{ _("Reason") }}</th>
+                            <th class="table__th text-right">{{ _("Actions") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="table__body">
+                        {% for to in time_offs %}
+                        <tr class="table__row">
+                            <td class="table__td">
+                                <span class="chip chip--sm">{{ to.leave_type_label }}</span>
+                            </td>
+                            <td class="table__td">
+                                {{ to.start_date|dateformat("d/m/Y") }}
+                                {% if to.start_date != to.end_date %}
+                                - {{ to.end_date|dateformat("d/m/Y") }}
+                                {% endif %}
+                                {% if not to.is_full_day %}
+                                <div class="text-xs text-muted">
+                                    {{ to.start_time.strftime('%H:%M') if to.start_time else '' }}
+                                    - {{ to.end_time.strftime('%H:%M') if to.end_time else '' }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="table__td text-center">{{ to.duration_days }}</td>
+                            <td class="table__td">
+                                {% if to.status == 'pending' %}
+                                <span class="chip chip--sm chip--warning">{{ _("Pending") }}</span>
+                                {% elif to.status == 'approved' %}
+                                <span class="chip chip--sm chip--success">{{ _("Approved") }}</span>
+                                {% elif to.status == 'rejected' %}
+                                <span class="chip chip--sm chip--error">{{ _("Rejected") }}</span>
+                                {% else %}
+                                <span class="chip chip--sm">{{ _("Cancelled") }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="table__td text-muted">{{ to.reason|truncate(40) if to.reason else '-' }}</td>
+                            <td class="table__td text-right">
+                                {% if to.status == 'pending' %}
+                                <button class="btn btn-ghost btn-sm text-success"
+                                    hx-post="/m/staff/staff/{{ member.id }}/time-off/{{ to.id }}/approve"
+                                    hx-target="#main-content-area"
+                                    hx-confirm="{{ _('Approve this request?') }}">
+                                    {{ icon("checkmark-outline") }}
+                                </button>
+                                <button class="btn btn-ghost btn-sm text-error"
+                                    hx-post="/m/staff/staff/{{ member.id }}/time-off/{{ to.id }}/reject"
+                                    hx-target="#main-content-area"
+                                    hx-vals='{"notes": ""}'
+                                    hx-confirm="{{ _('Reject this request?') }}">
+                                    {{ icon("close-outline") }}
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-12 text-muted">
+            {{ icon("airplane-outline", css_class="text-5xl block mx-auto mb-2") }}
+            <p class="mt-2">{{ _("No time off requests") }}</p>
+            <button class="btn color-primary btn-sm mt-3" @click="showCreate = true">
+                {{ icon("add-outline", css_class="mr-1") }}
+                {{ _("Request Time Off") }}
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Create Time Off Modal -->
+    <div class="modal-backdrop" x-show="showCreate" x-cloak>
+        <div class="modal" @click.outside="showCreate = false">
+            <div class="modal-header">
+                <h2 class="modal-title">{{ _("Request Time Off") }}</h2>
+                <button @click="showCreate = false" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body space-y-4">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Type") }}</label>
+                    <select class="select w-full" x-model="newTimeOff.leave_type">
+                        <option value="vacation">{{ _("Vacation") }}</option>
+                        <option value="sick">{{ _("Sick Leave") }}</option>
+                        <option value="personal">{{ _("Personal Leave") }}</option>
+                        <option value="training">{{ _("Training") }}</option>
+                        <option value="other">{{ _("Other") }}</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Start Date") }}</label>
+                        <input type="date" class="input w-full" x-model="newTimeOff.start_date" required>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("End Date") }}</label>
+                        <input type="date" class="input w-full" x-model="newTimeOff.end_date" required>
+                    </div>
+                </div>
+                <label class="flex items-center gap-3">
+                    <input type="checkbox" class="toggle" x-model="newTimeOff.is_full_day">
+                    <span>{{ _("Full Day") }}</span>
+                </label>
+                <template x-if="!newTimeOff.is_full_day">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium">{{ _("Start Time") }}</label>
+                            <input type="time" class="input w-full" x-model="newTimeOff.start_time">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">{{ _("End Time") }}</label>
+                            <input type="time" class="input w-full" x-model="newTimeOff.end_time">
+                        </div>
+                    </div>
+                </template>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Reason") }}</label>
+                    <textarea class="textarea w-full" rows="2" x-model="newTimeOff.reason"
+                        placeholder="{{ _('Optional reason...') }}"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" @click="showCreate = false">{{ _("Cancel") }}</button>
+                <button class="btn color-primary" @click="createTimeOff()" :disabled="saving">
+                    <span x-show="!saving">{{ _("Submit Request") }}</span>
+                    <span x-show="saving" class="loading loading-sm"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+function timeOffApp() {
+    return {
+        showCreate: false,
+        saving: false,
+        newTimeOff: {
+            leave_type: 'vacation',
+            start_date: '',
+            end_date: '',
+            is_full_day: true,
+            start_time: '',
+            end_time: '',
+            reason: '',
+        },
+
+        async createTimeOff() {
+            if (!this.newTimeOff.start_date || !this.newTimeOff.end_date) {
+                htmx.trigger(document.body, 'showMessage', {level: 'error', text: '{{ _("Start and end dates are required") }}'});
+                return;
+            }
+            this.saving = true;
+            try {
+                const payload = {...this.newTimeOff};
+                if (payload.is_full_day) {
+                    payload.start_time = null;
+                    payload.end_time = null;
+                }
+                const resp = await fetch('/m/staff/staff/{{ member.id }}/time-off/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.showCreate = false;
+                    htmx.ajax('GET', '/m/staff/staff/{{ member.id }}/time-off', {target: '#main-content-area'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error});
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.saving = false;
+            }
+        },
+    }
+}
+</script>

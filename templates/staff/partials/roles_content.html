@@ -1,0 +1,189 @@
+<div x-data="rolesApp()" class="p-4">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-xl font-semibold">{{ _("Staff Roles") }}</h1>
+        <button class="btn btn-sm color-primary" @click="showCreate = true">
+            {{ icon("add-outline", css_class="mr-1") }}
+            {{ _("Add Role") }}
+        </button>
+    </div>
+
+    {% if roles %}
+    <div class="space-y-3">
+        {% for role in roles %}
+        <div class="card" x-data="{ editing: false }">
+            <div class="card-body">
+                <!-- View mode -->
+                <div x-show="!editing" class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        {% if role.color %}
+                        <div class="w-4 h-4 rounded-full" style="background-color: {{ role.color }}"></div>
+                        {% endif %}
+                        <div>
+                            <div class="font-medium">{{ role.name }}</div>
+                            {% if role.description %}
+                            <div class="text-sm text-muted">{{ role.description }}</div>
+                            {% endif %}
+                        </div>
+                        {% if not role.is_active %}
+                        <span class="chip chip--sm chip--warning">{{ _("Inactive") }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-muted">
+                            {{ role_counts.get(role.id|string, 0) }} {{ _("member(s)") }}
+                        </span>
+                        <button class="btn btn-ghost btn-sm" @click="editing = true; editRole = {name: '{{ role.name }}', description: '{{ role.description|default("") }}', color: '{{ role.color|default("") }}', order: {{ role.order }}, is_active: {{ 'true' if role.is_active else 'false' }}}">
+                            {{ icon("create-outline") }}
+                        </button>
+                        <button class="btn btn-ghost btn-sm text-error" @click="deleteRole('{{ role.id }}')">
+                            {{ icon("trash-outline") }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Edit mode -->
+                <div x-show="editing" x-cloak class="space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="text-sm font-medium">{{ _("Name") }}</label>
+                            <input type="text" class="input w-full" x-model="editRole.name">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">{{ _("Color") }}</label>
+                            <input type="color" class="input w-full h-10" x-model="editRole.color">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">{{ _("Order") }}</label>
+                            <input type="number" class="input w-full" min="0" x-model.number="editRole.order">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Description") }}</label>
+                        <input type="text" class="input w-full" x-model="editRole.description">
+                    </div>
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" class="toggle" x-model="editRole.is_active">
+                        <span>{{ _("Active") }}</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <button class="btn btn-sm" @click="editing = false">{{ _("Cancel") }}</button>
+                        <button class="btn btn-sm color-primary" @click="saveRole('{{ role.id }}'); editing = false">
+                            {{ _("Save") }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-12 text-muted">
+            {{ icon("shield-outline", css_class="text-5xl block mx-auto mb-2") }}
+            <p class="mt-2">{{ _("No roles configured") }}</p>
+            <button class="btn color-primary btn-sm mt-3" @click="showCreate = true">
+                {{ icon("add-outline", css_class="mr-1") }}
+                {{ _("Add first role") }}
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Create Role Modal -->
+    <div class="modal-backdrop" x-show="showCreate" x-cloak>
+        <div class="modal" @click.outside="showCreate = false">
+            <div class="modal-header">
+                <h2 class="modal-title">{{ _("New Role") }}</h2>
+                <button @click="showCreate = false" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body space-y-3">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Name") }}</label>
+                    <input type="text" class="input w-full" x-model="newRole.name" placeholder="{{ _('Role name') }}">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Description") }}</label>
+                    <input type="text" class="input w-full" x-model="newRole.description" placeholder="{{ _('Optional description') }}">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Color") }}</label>
+                        <input type="color" class="input w-full h-10" x-model="newRole.color">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Order") }}</label>
+                        <input type="number" class="input w-full" min="0" x-model.number="newRole.order">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" @click="showCreate = false">{{ _("Cancel") }}</button>
+                <button class="btn color-primary" @click="createRole()">{{ _("Create") }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+function rolesApp() {
+    return {
+        showCreate: false,
+        editRole: {name: '', description: '', color: '', order: 0, is_active: true},
+        newRole: {name: '', description: '', color: '#3B82F6', order: 0, is_active: true},
+
+        async createRole() {
+            if (!this.newRole.name) return;
+            try {
+                const resp = await fetch('/m/staff/roles/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(this.newRole),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.showCreate = false;
+                    htmx.ajax('GET', '/m/staff/roles', {target: '#main-content-area'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error});
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
+
+        async saveRole(id) {
+            try {
+                const resp = await fetch(`/m/staff/roles/${id}/edit`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(this.editRole),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    htmx.ajax('GET', '/m/staff/roles', {target: '#main-content-area'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error});
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
+
+        async deleteRole(id) {
+            if (!confirm('{{ _("Delete this role?") }}')) return;
+            try {
+                const resp = await fetch(`/m/staff/roles/${id}/delete`, {method: 'POST'});
+                const data = await resp.json();
+                if (data.success) {
+                    htmx.ajax('GET', '/m/staff/roles', {target: '#main-content-area'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error});
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        },
+    }
+}
+</script>

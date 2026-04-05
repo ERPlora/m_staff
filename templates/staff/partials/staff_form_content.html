@@ -1,0 +1,234 @@
+<div x-data="staffFormApp()" class="p-4">
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-6">
+        <button class="btn btn-ghost btn-sm"
+            hx-get="/m/staff/staff"
+            hx-target="#main-content-area"
+            hx-push-url="true">
+            {{ icon("arrow-back-outline") }}
+        </button>
+        <h1 class="text-xl font-semibold">
+            {% if member %}{{ _("Edit Staff Member") }}{% else %}{{ _("New Staff Member") }}{% endif %}
+        </h1>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Basic Info -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">{{ _("Basic Information") }}</h2>
+            </div>
+            <div class="card-body space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("First Name") }} *</label>
+                        <input type="text" class="input w-full" x-model="form.first_name" required>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Last Name") }} *</label>
+                        <input type="text" class="input w-full" x-model="form.last_name" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Email") }}</label>
+                    <input type="email" class="input w-full" x-model="form.email">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Phone") }}</label>
+                    <input type="tel" class="input w-full" x-model="form.phone">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Employee ID") }}</label>
+                    <input type="text" class="input w-full" x-model="form.employee_id" placeholder="{{ _('Optional internal ID') }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Employment -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">{{ _("Employment") }}</h2>
+            </div>
+            <div class="card-body space-y-4">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Role") }}</label>
+                    <select class="select w-full" x-model="form.role_id">
+                        <option value="">{{ _("No role") }}</option>
+                        {% for role in roles %}
+                        <option value="{{ role.id }}">{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Status") }}</label>
+                    <select class="select w-full" x-model="form.status">
+                        <option value="active">{{ _("Active") }}</option>
+                        <option value="inactive">{{ _("Inactive") }}</option>
+                        <option value="on_leave">{{ _("On Leave") }}</option>
+                        <option value="terminated">{{ _("Terminated") }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Hire Date") }}</label>
+                    <input type="date" class="input w-full" x-model="form.hire_date">
+                </div>
+                {% if member %}
+                <div>
+                    <label class="text-sm font-medium">{{ _("Termination Date") }}</label>
+                    <input type="date" class="input w-full" x-model="form.termination_date">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bio -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">{{ _("Bio & Specialties") }}</h2>
+            </div>
+            <div class="card-body space-y-4">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Bio") }}</label>
+                    <textarea class="textarea w-full" rows="3" x-model="form.bio"
+                        placeholder="{{ _('Short biography...') }}"></textarea>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Specialties") }}</label>
+                    <input type="text" class="input w-full" x-model="form.specialties"
+                        placeholder="{{ _('Comma-separated: Haircut, Coloring, Massage') }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking & Compensation -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">{{ _("Booking & Compensation") }}</h2>
+            </div>
+            <div class="card-body space-y-4">
+                <label class="flex items-center gap-3">
+                    <input type="checkbox" class="toggle" x-model="form.is_bookable">
+                    <span>{{ _("Available for booking") }}</span>
+                </label>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Booking Buffer (min)") }}</label>
+                        <input type="number" class="input w-full" min="0" x-model.number="form.booking_buffer">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Calendar Color") }}</label>
+                        <input type="color" class="input w-full h-10" x-model="form.color">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Hourly Rate") }}</label>
+                        <input type="number" class="input w-full" min="0" step="0.01" x-model="form.hourly_rate">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">{{ _("Commission Rate (%)") }}</label>
+                        <input type="number" class="input w-full" min="0" max="100" step="0.01" x-model="form.commission_rate">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Display Order") }}</label>
+                    <input type="number" class="input w-full" min="0" x-model.number="form.order">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card mt-6">
+        <div class="card-header">
+            <h2 class="card-title">{{ _("Internal Notes") }}</h2>
+        </div>
+        <div class="card-body">
+            <textarea class="textarea w-full" rows="3" x-model="form.notes"
+                placeholder="{{ _('Notes visible only to managers...') }}"></textarea>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-end gap-3 mt-6">
+        <button class="btn"
+            hx-get="/m/staff/staff"
+            hx-target="#main-content-area"
+            hx-push-url="true">
+            {{ _("Cancel") }}
+        </button>
+        <button class="btn color-primary" @click="save()" :disabled="saving">
+            <span x-show="!saving">
+                {{ icon("save-outline", css_class="mr-1") }}
+                {% if member %}{{ _("Save Changes") }}{% else %}{{ _("Create Member") }}{% endif %}
+            </span>
+            <span x-show="saving" class="loading loading-sm"></span>
+        </button>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+function staffFormApp() {
+    return {
+        saving: false,
+        form: {
+            first_name: `{{ member.first_name if member else '' }}`,
+            last_name: `{{ member.last_name if member else '' }}`,
+            email: `{{ member.email if member else '' }}`,
+            phone: `{{ member.phone if member else '' }}`,
+            employee_id: `{{ member.employee_id if member else '' }}`,
+            role_id: `{{ member.role_id if member and member.role_id else '' }}`,
+            status: `{{ member.status if member else 'active' }}`,
+            hire_date: `{{ member.hire_date.isoformat() if member and member.hire_date else '' }}`,
+            termination_date: `{{ member.termination_date.isoformat() if member and member.termination_date else '' }}`,
+            bio: `{{ member.bio|default('') }}`,
+            specialties: `{{ member.specialties|default('') }}`,
+            is_bookable: {{ 'true' if (not member or member.is_bookable) else 'false' }},
+            color: `{{ member.color if member and member.color else '#3B82F6' }}`,
+            booking_buffer: {{ member.booking_buffer if member else 0 }},
+            hourly_rate: {{ member.hourly_rate if member else '0.00' }},
+            commission_rate: {{ member.commission_rate if member else '0.00' }},
+            order: {{ member.order if member else 0 }},
+            notes: `{{ member.notes|default('') }}`,
+        },
+
+        async save() {
+            if (!this.form.first_name || !this.form.last_name) {
+                htmx.trigger(document.body, 'showMessage', {level: 'error', text: '{{ _("First and last name are required") }}'});
+                return;
+            }
+
+            this.saving = true;
+            const payload = {...this.form};
+            if (!payload.role_id) payload.role_id = null;
+            if (!payload.hire_date) delete payload.hire_date;
+            if (!payload.termination_date) delete payload.termination_date;
+
+            try {
+                const url = '{{ "/m/staff/staff/" ~ member.id ~ "/edit" if member else "/m/staff/staff/create" }}';
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    htmx.trigger(document.body, 'showMessage', {level: 'success', text: '{{ _("Staff member saved") }}'});
+                    {% if member %}
+                    htmx.ajax('GET', '/m/staff/staff/{{ member.id }}', {target: '#main-content-area'});
+                    {% else %}
+                    htmx.ajax('GET', `/m/staff/staff/${data.id}`, {target: '#main-content-area'});
+                    {% endif %}
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error || '{{ _("Error saving") }}'});
+                }
+            } catch (e) {
+                console.error(e);
+                htmx.trigger(document.body, 'showMessage', {level: 'error', text: '{{ _("Error saving") }}'});
+            } finally {
+                this.saving = false;
+            }
+        },
+    }
+}
+</script>

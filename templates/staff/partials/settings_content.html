@@ -1,0 +1,137 @@
+<div x-data="staffSettingsApp()" class="p-4 space-y-6">
+
+    <!-- Working Hours Defaults -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">{{ _("Working Hours Defaults") }}</h2>
+        </div>
+        <div class="card-body space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Default Work Start") }}</label>
+                    <input type="time" class="input w-full" x-model="form.default_work_start">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Default Work End") }}</label>
+                    <input type="time" class="input w-full" x-model="form.default_work_end">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Default Break Duration (min)") }}</label>
+                    <input type="number" class="input w-full" min="0" max="480" x-model.number="form.default_break_duration">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduling -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">{{ _("Scheduling") }}</h2>
+        </div>
+        <div class="card-body space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="text-sm font-medium">{{ _("Min Advance Booking (hours)") }}</label>
+                    <input type="number" class="input w-full" min="0" max="168" x-model.number="form.min_advance_booking">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Max Daily Hours") }}</label>
+                    <input type="number" class="input w-full" min="1" max="24" x-model.number="form.max_daily_hours">
+                </div>
+                <div>
+                    <label class="text-sm font-medium">{{ _("Overtime Threshold (hours/week)") }}</label>
+                    <input type="number" class="input w-full" min="1" max="168" x-model.number="form.overtime_threshold">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Display -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">{{ _("Display Options") }}</h2>
+        </div>
+        <div class="card-body space-y-3">
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="toggle" x-model="form.show_staff_photos">
+                <span>{{ _("Show Staff Photos") }}</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="toggle" x-model="form.show_staff_bio">
+                <span>{{ _("Show Staff Bio") }}</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="toggle" x-model="form.allow_staff_selection">
+                <div>
+                    <span>{{ _("Allow Staff Selection") }}</span>
+                    <div class="text-xs text-muted">{{ _("Allow customers to select specific staff member") }}</div>
+                </div>
+            </label>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">{{ _("Notifications") }}</h2>
+        </div>
+        <div class="card-body space-y-3">
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="toggle" x-model="form.notify_new_appointment">
+                <span>{{ _("Notify on New Appointment") }}</span>
+            </label>
+            <label class="flex items-center gap-3">
+                <input type="checkbox" class="toggle" x-model="form.notify_cancellation">
+                <span>{{ _("Notify on Cancellation") }}</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <button class="btn color-primary" @click="saveSettings()" :disabled="saving">
+        <span x-show="!saving">{{ icon("save-outline", css_class="mr-2") }} {{ _("Save Settings") }}</span>
+        <span x-show="saving" class="loading loading-sm"></span>
+    </button>
+</div>
+
+<script nonce="{{ csp_nonce }}">
+function staffSettingsApp() {
+    return {
+        saving: false,
+        form: {
+            default_work_start: '{{ settings.default_work_start.strftime("%H:%M") if settings.default_work_start else "09:00" }}',
+            default_work_end: '{{ settings.default_work_end.strftime("%H:%M") if settings.default_work_end else "18:00" }}',
+            default_break_duration: {{ settings.default_break_duration }},
+            min_advance_booking: {{ settings.min_advance_booking }},
+            max_daily_hours: {{ settings.max_daily_hours }},
+            overtime_threshold: {{ settings.overtime_threshold }},
+            show_staff_photos: {{ 'true' if settings.show_staff_photos else 'false' }},
+            show_staff_bio: {{ 'true' if settings.show_staff_bio else 'false' }},
+            allow_staff_selection: {{ 'true' if settings.allow_staff_selection else 'false' }},
+            notify_new_appointment: {{ 'true' if settings.notify_new_appointment else 'false' }},
+            notify_cancellation: {{ 'true' if settings.notify_cancellation else 'false' }},
+        },
+
+        async saveSettings() {
+            this.saving = true;
+            try {
+                const resp = await fetch('/m/staff/settings/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(this.form),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    htmx.trigger(document.body, 'showMessage', {level: 'success', text: '{{ _("Settings saved") }}'});
+                } else {
+                    htmx.trigger(document.body, 'showMessage', {level: 'error', text: data.error || '{{ _("Error saving") }}'});
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                this.saving = false;
+            }
+        },
+    }
+}
+</script>

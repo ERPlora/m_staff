@@ -1,0 +1,272 @@
+<div class="p-4">
+    <!-- Back + Header -->
+    <div class="flex items-center gap-4 mb-6">
+        <button class="btn btn-ghost btn-sm"
+            hx-get="/m/staff/staff"
+            hx-target="#main-content-area"
+            hx-push-url="true">
+            {{ icon("arrow-back-outline") }}
+        </button>
+        <div class="flex items-center gap-3 flex-1">
+            {% if member.photo %}
+            <img src="{{ member.photo }}" alt="{{ member.full_name }}" class="w-14 h-14 rounded-full object-cover">
+            {% else %}
+            <div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <span class="text-xl font-semibold text-primary">{{ member.first_name[0] }}{{ member.last_name[0] }}</span>
+            </div>
+            {% endif %}
+            <div>
+                <h1 class="text-xl font-semibold">{{ member.full_name }}</h1>
+                <div class="flex items-center gap-2 text-sm text-muted">
+                    {% if member.role_rel %}
+                    <span>{{ member.role_rel.name }}</span>
+                    <span>&bull;</span>
+                    {% endif %}
+                    {% if member.status == 'active' %}
+                    <span class="chip chip--sm chip--success">{{ _("Active") }}</span>
+                    {% elif member.status == 'on_leave' %}
+                    <span class="chip chip--sm chip--warning">{{ _("On Leave") }}</span>
+                    {% elif member.status == 'inactive' %}
+                    <span class="chip chip--sm">{{ _("Inactive") }}</span>
+                    {% else %}
+                    <span class="chip chip--sm chip--error">{{ _("Terminated") }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button class="btn btn-sm"
+                hx-get="/m/staff/staff/{{ member.id }}/edit"
+                hx-target="#main-content-area"
+                hx-push-url="true">
+                {{ icon("create-outline", css_class="mr-1") }}
+                {{ _("Edit") }}
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left column: Info -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Contact Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ _("Contact Information") }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-sm text-muted">{{ _("Email") }}</div>
+                            <div class="font-medium">{{ member.email or '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">{{ _("Phone") }}</div>
+                            <div class="font-medium">{{ member.phone or '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">{{ _("Employee ID") }}</div>
+                            <div class="font-medium">{{ member.employee_id or '-' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">{{ _("Hire Date") }}</div>
+                            <div class="font-medium">{{ member.hire_date|dateformat("d/m/Y") if member.hire_date else '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bio & Specialties -->
+            {% if member.bio or member.specialties %}
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ _("Bio & Specialties") }}</h2>
+                </div>
+                <div class="card-body">
+                    {% if member.bio %}
+                    <p class="mb-4">{{ member.bio }}</p>
+                    {% endif %}
+                    {% if member.specialties %}
+                    <div class="flex flex-wrap gap-2">
+                        {% for specialty in member.get_specialties_list() %}
+                        <span class="chip chip--sm">{{ specialty }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Compensation -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ _("Compensation") }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <div class="text-sm text-muted">{{ _("Hourly Rate") }}</div>
+                            <div class="font-medium">{{ currency(member.hourly_rate) }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">{{ _("Commission Rate") }}</div>
+                            <div class="font-medium">{{ member.commission_rate }}%</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">{{ _("Years of Service") }}</div>
+                            <div class="font-medium">{{ member.years_of_service }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Services -->
+            {% if services %}
+            <div class="card">
+                <div class="card-header">
+                    <div class="flex justify-between items-center">
+                        <h2 class="card-title">{{ _("Services") }}</h2>
+                        <button class="btn btn-ghost btn-sm"
+                            hx-get="/m/staff/staff/{{ member.id }}/services"
+                            hx-target="#main-content-area"
+                            hx-push-url="true">
+                            {{ _("Manage") }}
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="space-y-2">
+                        {% for svc in services %}
+                        <div class="flex items-center justify-between p-2 rounded bg-base-100">
+                            <div>
+                                <span class="font-medium">{{ svc.service_name }}</span>
+                                {% if svc.is_primary %}
+                                <span class="chip chip--sm chip--primary ml-2">{{ _("Primary") }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-sm text-muted">
+                                {% if svc.custom_duration %}{{ svc.custom_duration }} min{% endif %}
+                                {% if svc.custom_price %} &bull; {{ currency(svc.custom_price) }}{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right column: Quick actions -->
+        <div class="space-y-6">
+            <!-- Booking Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ _("Booking") }}</h2>
+                </div>
+                <div class="card-body space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">{{ _("Bookable") }}</span>
+                        {% if member.is_bookable %}
+                        <span class="chip chip--sm chip--success">{{ _("Yes") }}</span>
+                        {% else %}
+                        <span class="chip chip--sm">{{ _("No") }}</span>
+                        {% endif %}
+                    </div>
+                    {% if member.booking_buffer %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">{{ _("Buffer") }}</span>
+                        <span class="text-sm font-medium">{{ member.booking_buffer }} min</span>
+                    </div>
+                    {% endif %}
+                    {% if member.color %}
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">{{ _("Calendar Color") }}</span>
+                        <div class="w-6 h-6 rounded" style="background-color: {{ member.color }}"></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ _("Quick Actions") }}</h2>
+                </div>
+                <div class="card-body space-y-2">
+                    <button class="btn btn-ghost btn-sm w-full justify-start"
+                        hx-get="/m/staff/staff/{{ member.id }}/schedules"
+                        hx-target="#main-content-area"
+                        hx-push-url="true">
+                        {{ icon("calendar-outline", css_class="mr-2") }}
+                        {{ _("View Schedules") }}
+                    </button>
+                    <button class="btn btn-ghost btn-sm w-full justify-start"
+                        hx-get="/m/staff/staff/{{ member.id }}/time-off"
+                        hx-target="#main-content-area"
+                        hx-push-url="true">
+                        {{ icon("airplane-outline", css_class="mr-2") }}
+                        {{ _("Time Off") }}
+                    </button>
+                    <button class="btn btn-ghost btn-sm w-full justify-start"
+                        hx-get="/m/staff/staff/{{ member.id }}/services"
+                        hx-target="#main-content-area"
+                        hx-push-url="true">
+                        {{ icon("construct-outline", css_class="mr-2") }}
+                        {{ _("Service Assignments") }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pending Time Off -->
+            {% if pending_time_off %}
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ _("Pending Time Off") }}</h2>
+                </div>
+                <div class="card-body space-y-3">
+                    {% for to in pending_time_off %}
+                    <div class="p-3 rounded-lg bg-warning/5 border border-warning/20">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="chip chip--sm chip--warning">{{ to.leave_type_label }}</span>
+                            <span class="text-xs text-muted">{{ to.duration_days }} {{ _("day(s)") }}</span>
+                        </div>
+                        <div class="text-sm">
+                            {{ to.start_date|dateformat("d/m/Y") }} - {{ to.end_date|dateformat("d/m/Y") }}
+                        </div>
+                        {% if to.reason %}
+                        <div class="text-xs text-muted mt-1">{{ to.reason|truncate(80) }}</div>
+                        {% endif %}
+                        <div class="flex gap-2 mt-2">
+                            <button class="btn btn-sm color-success"
+                                hx-post="/m/staff/staff/{{ member.id }}/time-off/{{ to.id }}/approve"
+                                hx-target="#main-content-area"
+                                hx-confirm="{{ _('Approve this time off request?') }}">
+                                {{ _("Approve") }}
+                            </button>
+                            <button class="btn btn-sm color-error"
+                                hx-post="/m/staff/staff/{{ member.id }}/time-off/{{ to.id }}/reject"
+                                hx-target="#main-content-area"
+                                hx-vals='{"notes": ""}'
+                                hx-confirm="{{ _('Reject this time off request?') }}">
+                                {{ _("Reject") }}
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if member.notes %}
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ _("Internal Notes") }}</h2>
+                </div>
+                <div class="card-body">
+                    <p class="text-sm">{{ member.notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
