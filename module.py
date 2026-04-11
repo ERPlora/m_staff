@@ -11,7 +11,7 @@ Base HR module for appointment booking, commissions, and workforce management.
 # ---------------------------------------------------------------------------
 MODULE_ID = "staff"
 MODULE_NAME = "Staff"
-MODULE_VERSION = "2.0.0"
+MODULE_VERSION = "2.0.1"
 MODULE_ICON = "people-outline"
 MODULE_DESCRIPTION = "Staff profiles, roles, schedules, time off, and service assignments"
 MODULE_AUTHOR = "ERPlora"

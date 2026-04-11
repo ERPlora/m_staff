@@ -206,6 +206,85 @@ class CreateStaffMember(AssistantTool):
 
 
 @register_tool
+class BulkCreateStaffMembers(AssistantTool):
+    name = "bulk_create_staff_members"
+    description = (
+        "Create multiple staff members at once. Useful for onboarding a team in one shot. "
+        "Each item follows the same schema as create_staff_member. "
+        "Returns created count and per-item errors."
+    )
+    module_id = "staff"
+    required_permission = "staff.add_staff_member"
+    requires_confirmation = True
+    parameters = {
+        "type": "object",
+        "properties": {
+            "members": {
+                "type": "array",
+                "description": "List of staff members to create",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "first_name": {"type": "string", "description": "First name"},
+                        "last_name": {"type": "string", "description": "Last name"},
+                        "email": {"type": "string", "description": "Email address"},
+                        "phone": {"type": "string", "description": "Phone number"},
+                        "role_id": {"type": "string", "description": "Role UUID"},
+                        "hire_date": {"type": "string", "description": "Hire date (YYYY-MM-DD)"},
+                        "hourly_rate": {"type": "string", "description": "Hourly rate (decimal)"},
+                        "is_bookable": {"type": "boolean", "description": "Can be booked for appointments"},
+                        "bio": {"type": "string", "description": "Staff bio"},
+                        "specialties": {"type": "string", "description": "Comma-separated specialties"},
+                    },
+                    "required": ["first_name", "last_name"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+        "required": ["members"],
+        "additionalProperties": False,
+    }
+
+    async def execute(self, args: dict, request: Any) -> dict:
+        from decimal import Decimal
+        from datetime import datetime as _datetime
+
+        db = request.state.db
+        hub_id = request.state.hub_id
+
+        created = 0
+        errors = []
+
+        for item in args.get("members", []):
+            try:
+                hire = None
+                if item.get("hire_date"):
+                    hire = _datetime.strptime(item["hire_date"], "%Y-%m-%d").date()
+
+                async with atomic(db) as session:
+                    m = StaffMember(
+                        hub_id=hub_id,
+                        first_name=item["first_name"],
+                        last_name=item["last_name"],
+                        email=item.get("email", ""),
+                        phone=item.get("phone", ""),
+                        role_id=uuid.UUID(item["role_id"]) if item.get("role_id") else None,
+                        hire_date=hire,
+                        hourly_rate=Decimal(item["hourly_rate"]) if item.get("hourly_rate") else Decimal("0.00"),
+                        is_bookable=item.get("is_bookable", True),
+                        bio=item.get("bio", ""),
+                        specialties=item.get("specialties", ""),
+                    )
+                    session.add(m)
+                    await session.flush()
+                created += 1
+            except Exception as e:
+                errors.append({"name": f"{item.get('first_name', '')} {item.get('last_name', '')}".strip(), "error": str(e)})
+
+        return {"success": True, "created": created, "errors": errors}
+
+
+@register_tool
 class UpdateStaffMember(AssistantTool):
     name = "update_staff_member"
     description = "Update an existing staff member. SIDE EFFECT. Requires confirmation."
