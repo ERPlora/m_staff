@@ -52,7 +52,7 @@ def _q(model, db, hub_id):
 # ============================================================================
 
 @router.get("/")
-@htmx_view(module_id="staff", view_id="dashboard")
+@htmx_view(module_id="staff", view_id="dashboard", permissions="staff.view_staff_member")
 async def dashboard(request: Request, db: DbSession, user: CurrentUser, hub_id: HubId):
     """Staff dashboard with KPIs."""
     total_staff = await _q(StaffMember, db, hub_id).count()
@@ -97,7 +97,7 @@ async def dashboard(request: Request, db: DbSession, user: CurrentUser, hub_id: 
 # ============================================================================
 
 @router.get("/staff")
-@htmx_view(module_id="staff", view_id="staff_list")
+@htmx_view(module_id="staff", view_id="staff_list", permissions="staff.view_staff_member")
 async def staff_list(
     request: Request, db: DbSession, user: CurrentUser, hub_id: HubId,
     search: str = "", status: str = "", role_id: str = "",
@@ -394,7 +394,7 @@ async def schedule_create(
 # ============================================================================
 
 @router.get("/schedules")
-@htmx_view(module_id="staff", view_id="schedules")
+@htmx_view(module_id="staff", view_id="schedules", permissions="staff.view_staff_member")
 async def schedules_overview(
     request: Request, db: DbSession, user: CurrentUser, hub_id: HubId,
 ):
@@ -609,7 +609,7 @@ async def staff_services_save(
 # ============================================================================
 
 @router.get("/roles")
-@htmx_view(module_id="staff", view_id="roles")
+@htmx_view(module_id="staff", view_id="roles", permissions="staff.view_staff_member")
 async def roles_list(
     request: Request, db: DbSession, user: CurrentUser, hub_id: HubId,
 ):
@@ -700,7 +700,7 @@ async def role_delete(
 # ============================================================================
 
 @router.get("/settings")
-@htmx_view(module_id="staff", view_id="settings")
+@htmx_view(module_id="staff", view_id="settings", permissions="staff.manage_settings")
 async def settings_view(
     request: Request, db: DbSession, user: CurrentUser, hub_id: HubId,
 ):
