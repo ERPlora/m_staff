@@ -15,7 +15,6 @@ MODULE_VERSION = "2.0.3"
 MODULE_ICON = "people-outline"
 MODULE_DESCRIPTION = "Staff profiles, roles, schedules, time off, and service assignments"
 MODULE_AUTHOR = "ERPlora"
-MODULE_CATEGORY = "hr"
 
 # ---------------------------------------------------------------------------
 # Capabilities
